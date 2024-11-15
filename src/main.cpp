@@ -5,11 +5,6 @@
 #include <encoders/MXLEMMING_observer/MXLEMMINGObserverSensor.h>
 #include <Adafruit_NeoPixel.h>
 #include "esp_task_wdt.h"
-//#include <encoders/smoothing/SmoothingSensor.h>
-//#include <encoders/mt6816/MagneticSensorMT6816.h>
-//#include "encoders/esp32hwencoder/ESP32HWEncoder.h"
-
-#include "..\.pio\libdeps\esp32dev\Simple FOC\src\current_sense\hardware_specific\esp32\esp32_adc_driver.cpp"
 
 
 #define VBUS_SENSE 1
@@ -33,32 +28,30 @@
 #define CS_C 9
 
 
-float target = 0;
-LowPassFilter LPF_target(2);  //  the higher the longer new values need to take effect
+float target = 0; 				//global variable for target
+LowPassFilter LPF_target(2);  	//  the higher the longer new values need to take effect
 
 float R3 = 100; //kOhm
 float R4 = 5.1; //kOhm
 
 Adafruit_NeoPixel strip(PIXEL_COUNT, LED_DIN, NEO_GRB + NEO_KHZ800);
 
+//Different motor presets
 //BLDCMotor motor = BLDCMotor(6,0.30625,4000,6.83*1e-6); //12.7 uH for tiny motor 4300 kV
 //BLDCMotor motor = BLDCMotor(11,0.05125,690,4.56*1e-6); //6.1 uH for large motor 690 kV
 //BLDCMotor motor = BLDCMotor(4,0.1375,1100,19.45*1e-6); //Plastic motor 957 kV?
 //BLDCMotor motor = BLDCMotor(7,0.01,3500,0.45*1e-6); //Orange motor 2700 kV?
 //BLDCMotor motor = BLDCMotor(4,0.525,1000,3.84*1e-7); //PCB motor 
-BLDCMotor motor = BLDCMotor(1,5.75,250,3.02*1e-4);
+BLDCMotor motor = BLDCMotor(1,5.75,250,3.02*1e-4); //Experimental Coreless motor 
 //BLDCMotor motor = BLDCMotor(6,0.1,12000,0.82*1e-6); //7300 kV
 
-//BLDCMotor motor = BLDCMotor(11);
-// magnetic sensor instance - MT6816 SPI mode
-//MagneticSensorMT6816 sensor = MagneticSensorMT6816(40);
-//MagneticSensorPWM sensor2 = MagneticSensorPWM(37,879,4119,16,4111);
+DRV8316_CSAGain CS_Gain = Gain_0V3; //Single variable for all Current sense gain
+unsigned int CS_Gain_mV = 150 * 2^(CS_Gain); //Needed for Low Side Current Sense 
+
 
 MXLEMMINGObserverSensor sensor = MXLEMMINGObserverSensor(motor);
 DRV8316Driver6PWM driver = DRV8316Driver6PWM(INHA,INLA,INHB,INLB,INHC,INLC,DRV8316_CS,false); // use the right pins for your setup!
-LowsideCurrentSense current_sense = LowsideCurrentSense(600,CS_A,CS_B,CS_C); //Default gain 0.15V/A
-
-//SmoothingSensor smooth(sensor, motor);
+LowsideCurrentSense current_sense = LowsideCurrentSense(CS_Gain_mV,CS_A,CS_B,CS_C); //Default gain is 0.15V/A
 
 // commander interface
 Commander command = Commander(Serial);
@@ -69,22 +62,7 @@ void doFL(char* cmd) { command.scalar(&sensor.flux_linkage, cmd); }
 
 void InnerFOCTask( void * parameter );
 
-
-//void doFW(char* cmd) { motor.current_sp_field_weakening = float(*cmd); }
-//void changeKV(char* cmd) { motor.KV_rating(int(cmd)); }
-//void changeL(char* cmd) { command.scalar(&target, cmd); }
-//void doPWM(){sensor2.handlePWM();}
-/*
-void doFW(char* cmd) { 
-  // calculate the KV
-  //Serial.println(motor.shaft_velocity/motor.target/_SQRT3*30.0f/_PI);
-	//driver.setActiveSynchronousRectificationEnabled(true);
-	Serial.print("Field weakening new target:\t");
-	Serial.println(float(*cmd));
-	motor.current_sp_field_weakening = float(*cmd);
-}*/
-
-
+//Function to read status registers of DRV8316C
 void printDRV8316Status() {
 	DRV8316Status status = driver.getStatus();
 	Serial.println("DRV8316 Status:");
@@ -144,69 +122,7 @@ void printDRV8316Status() {
 	Serial.println(lock);
 }
 
-void testAlignmentAndCogging(int direction) {
-
-  motor.move(0);
-  _delay(200);
-
-  sensor.update();
-  float initialAngle = sensor.getAngle();
-
-  const int shaft_rotation = 720; // 720 deg test - useful to see repeating cog pattern
-  int sample_count = int(shaft_rotation * motor.pole_pairs); // test every electrical degree
-
-  float stDevSum = 0;
-
-  float mean = 0.0f;
-  float prev_mean = 0.0f;
-
-
-  for (int i = 0; i < sample_count; i++) {
-
-    float shaftAngle = (float) direction * i * shaft_rotation / sample_count;
-    float electricAngle = (float) shaftAngle * motor.pole_pairs;
-    // move and wait
-    motor.move(shaftAngle * PI / 180);
-    _delay(5);
-
-    // measure
-    sensor.update();
-    float sensorAngle = (sensor.getAngle() - initialAngle) * 180 / PI;
-    float sensorElectricAngle = sensorAngle * motor.pole_pairs;
-    float electricAngleError = electricAngle - sensorElectricAngle;
-
-    // plot this - especially electricAngleError
-    Serial.print(electricAngle);
-    Serial.print("\t");
-    Serial.print(sensorElectricAngle );
-    Serial.print("\t");
-    Serial.println(electricAngleError);
-
-    // use knuth standard deviation algorithm so that we don't need an array too big for an Uno
-    prev_mean = mean;
-    mean = mean + (electricAngleError-mean)/(i+1);
-    stDevSum = stDevSum + (electricAngleError-mean)*(electricAngleError-prev_mean);
-
-  }
-
-  Serial.println();
-  Serial.println(F("ALIGNMENT AND COGGING REPORT"));
-  Serial.println();
-  Serial.print(F("Direction: "));
-  Serial.println(direction);
-  Serial.print(F("Mean error (alignment): "));
-  Serial.print(mean);
-  Serial.println(" deg (electrical)");
-  Serial.print(F("Standard Deviation (cogging): "));
-  Serial.print(sqrt(stDevSum/sample_count));
-  Serial.println(F(" deg (electrical)"));
-  Serial.println();
-  Serial.println(F("Plotting 3rd column of data (electricAngleError) will likely show sinusoidal cogging pattern with a frequency of 4xpole_pairs per rotation"));
-  Serial.println();
-
-}
-
-// Rainbow cycle along whole strip. Pass delay time (in ms) between frames.
+// Rainbow cycle for the onboard LED, used to signal that ESC has started up
 void rainbow(int wait) {
   // Hue of first pixel runs 3 complete loops through the color wheel.
   // Color wheel has a range of 65536 but it's OK if we roll over, so
@@ -230,43 +146,75 @@ void rainbow(int wait) {
   }
 }
 
+void configDRV8316(DRV8316_CSAGain gain, DRV8316_Slew slew, DRV8316_OCPLevel OCP, DRV8316_OCPMode OCPMode, DRV8316_OCPDeglitch OCPDeglitch){
+	driver.setCurrentSenseGain(gain);
+	_delay(10);
+	while (driver.getCurrentSenseGain() != gain)
+	{
+		Serial.println("Gain didn't set, trying again!");
+		driver.setCurrentSenseGain(gain);//Gain_1V2  Gain_0V6 Gain_0V3 Gain0_15
+		_delay(10);
+	}
+
+	driver.setSlew(slew);
+	_delay(10);
+	while (driver.getSlew() != slew)
+	{
+		Serial.println("Slew didn't set, trying again!");
+		driver.setSlew(slew);
+		_delay(10);
+	}
+
+	driver.setOCPLevel(OCP);
+	_delay(10);
+	while (driver.getOCPLevel() != OCP)
+	{
+		Serial.println("OCP didn't set, trying again!");
+		driver.setOCPLevel(OCP);
+		_delay(10);
+	}
+
+	driver.setOCPDeglitchTime(OCPDeglitch);
+	_delay(10);
+	while (driver.getOCPDeglitchTime() != OCPDeglitch)
+	{
+		Serial.println("OCPdeglitch didn't set, trying again!");
+		driver.setOCPDeglitchTime(OCPDeglitch);
+		_delay(10);
+	}
+
+	driver.setOCPMode(OCPMode);
+	_delay(10);
+	while (driver.getOCPMode() != OCPMode)
+	{
+		Serial.println("OCPMode didn't set, trying again!");
+		driver.setOCPMode(OCPMode);
+		_delay(10);
+	}
+
+}
+
 void onStatus(char* cmd) { printDRV8316Status(); }
 void clearFaultDriver(char* cmd) { 
 	driver.clearFault(); 
-	digitalWrite(DRV8316_EN, LOW); // Enable Driver
+	digitalWrite(DRV8316_EN, LOW); // Disable Driver
 	_delay(100);
 	digitalWrite(DRV8316_EN, HIGH); // Enable Driver
-	driver.setCurrentSenseGain(Gain_0V6);//Gain_1V2  Gain_0V6 Gain_0V3
-	driver.setSlew(Slew_200Vus);//Gain_0V25  Gain_0V375
-	driver.setOCPLevel(Curr_24A);
-	driver.setOCPDeglitchTime(Deglitch_1us6);
-	driver.setOCPMode(NoAction);
+
+	configDRV8316(CS_Gain, Slew_200Vus, Curr_24A, NoAction, Deglitch_1us6);
+
 }
-/*void enableSmoothing(char* cmd) {
-  float enable;
-  command.scalar(&enable, cmd);
-  motor.linkSensor(enable == 0 ? (Sensor*)&sensor : (Sensor*)&smooth);
-}*/
+
 
 TaskHandle_t FOC_TASK;
 
 void setup() {
   	pinMode(DRV8316_EN, OUTPUT);
 	digitalWrite(DRV8316_EN, HIGH); // Enable Driver
-	
 	pinMode(nFAULT, INPUT);
-
-	adcInit(PCB_TEMP);
-	adcInit(4);
-	adcInit(5);
-	adcInit(6);
-	/*pinMode(4, ANALOG);
-	pinMode(5, ANALOG);
-	pinMode(6, ANALOG);*/
 
 	strip.begin(); // Initialize NeoPixel strip object (REQUIRED)
   	strip.show();  // Initialize all pixels to 'off'
-
 
 	Serial.begin(1000000);
 	while (!Serial);
@@ -274,49 +222,25 @@ void setup() {
 	delay(100);
 
 	Serial.println("Initializing...");
-
 	SimpleFOCDebug::enable(&Serial);
-
 	sensor.init();
-
-	//sensor2.init();
-	//sensor2.enableInterrupt(doPWM);
-	//smooth.phase_correction = -_PI_6;
-
 	motor.linkSensor(&sensor);
 
 	Serial.print("\nBus Voltage:");
 	Serial.print("\t");
-	Serial.print(analogReadMilliVolts(VBUS_SENSE));
-	Serial.print("\t");
 	Serial.println(((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
-
+	Serial.println(CS_Gain_mV);
 
 	driver.voltage_power_supply = 24;
 	//driver.voltage_power_supply = 4.6;
 	driver.pwm_frequency = 25000;
 	driver.init();
   
-	//Serial.println("\nOld Current Sense gain:");
-	//Serial.println(driver.getCurrentSenseGain());
-	driver.setCurrentSenseGain(Gain_0V6);//Gain_1V2  Gain_0V6 Gain_0V15 Gain_0V3
-
-	//Serial.println("New Current Sense gain:");
-	//Serial.println(driver.getCurrentSenseGain());
-
-
-	//Serial.println("\nOld Slew rate:");
-	//Serial.println(driver.getSlew());
-	driver.setSlew(Slew_200Vus);//Gain_0V25  Gain_0V375
-	driver.setOCPLevel(Curr_24A);
-	driver.setOCPDeglitchTime(Deglitch_1us6);
-	driver.setOCPMode(NoAction);
-	//Serial.println("New Slew rate:");
-	//Serial.println(driver.getSlew());
+	configDRV8316(CS_Gain, Slew_200Vus, Curr_24A, NoAction, Deglitch_1us6);
 	
-	//driver.setRecirculationMode(CoastMode);
-	//driver.setActiveAsynchronousRectificationEnabled(true);
-	//driver.setActiveSynchronousRectificationEnabled(true);
+	//driver.setRecirculationMode(CoastMode); //Regen breaking disabled
+	//driver.setActiveAsynchronousRectificationEnabled(true); //Not sure if it breaks something
+	//driver.setActiveSynchronousRectificationEnabled(true); //not needed as already done by with the 6PWM
 
 	// link the driver to the current sense
 	current_sense.linkDriver(&driver);
@@ -325,17 +249,11 @@ void setup() {
 	
 	motor.voltage_sensor_align  = 0.5;                            // aligning voltage
 	motor.foc_modulation        = FOCModulationType::SpaceVectorPWM; // Only with Current Sense
-	//motor.foc_modulation        = FOCModulationType::Trapezoid_120; // Only with Current Sense
+	//motor.foc_modulation        = FOCModulationType::Trapezoid_120; // Experimental
 	motor.controller            = MotionControlType::torque;    // set motion control loop to be used
 	motor.torque_controller     = TorqueControlType::foc_current;
 
-	motor.voltage_limit = 1;
 
-	//motor.controller = MotionControlType::angle_openloop;
-  	//motor.voltage_limit=motor.voltage_sensor_align;
-  
-
-	
 	// Limit the voltage to have enough low side ON time for phase current sampling
 	driver.voltage_limit = driver.voltage_power_supply * 0.95;
 
@@ -351,73 +269,14 @@ void setup() {
 		motor.voltage_limit = driver.voltage_power_supply * 0.03;
 	}
   
-
-	/*
-	//motor.voltage_limit = 0.25;   // 12 Volt limit 
-	motor.current_limit = 1;    // 2 Amp current limit
-	motor.velocity_limit = 100; // 100 rad/s velocity limit*/
-
-
 	
-	// velocity loop PID
+	// velocity loop PID, needs to be tuned for the motor
 	motor.PID_velocity.P = 0.1;
 	motor.PID_velocity.I = 0.02;
-
 	motor.PID_velocity.limit= 2000;
-	// Low pass filtering time constant 
-	motor.LPF_velocity.Tf = 0.05;
-	// angle loop PID
-	motor.P_angle.P = 0.5;
-	// Low pass filtering time constant 
-	motor.LPF_angle.Tf = 0.0;
-	
+	motor.LPF_velocity.Tf = 0.05; // Low pass filtering time constant 
 
-	/*
-	// current q loop PID 
-	motor.PID_current_q.P = 0.1;
-	motor.PID_current_q.I = 0.1;
-	// Low pass filtering time constant 
-	motor.LPF_current_q.Tf = 0.02;
-	// current d loop PID
-	motor.PID_current_d.P = 0.1;
-	motor.PID_current_d.I = 0.1;
-	// Low pass filtering time constant 
-	motor.LPF_current_d.Tf = 0.02;
-	
-	
-	// contoller configuration based on the control type
-	motor.PID_velocity.P = 0.2f;
-	motor.PID_velocity.I = 20;
-	motor.PID_velocity.D = 0;
-	*/
-	/*
-	motor.PID_current_q.P = 1;
-	motor.PID_current_q.I= 0.5;
-	motor.PID_current_q.output_ramp= 2;
-	motor.PID_current_q.limit= 2;
-	motor.LPF_current_q.Tf = 0.01f;
-	
-	
-	motor.PID_current_d.P= 1;
-	motor.PID_current_d.I = 0.5;
-	motor.PID_current_d.output_ramp= 2;
-	motor.PID_current_d.limit= 2;
-	motor.LPF_current_d.Tf = 0.01f;
-
-	motor.LPF_angle.Tf = 0.0;
-	motor.LPF_velocity.Tf = 0.5;
-	*/
-	/*
-	motor.PID_current_q.P = 1;
-    motor.PID_current_q.I= 10;
-    motor.PID_current_d.P= 1;
-    motor.PID_current_d.I = 10;
-    motor.LPF_current_q.Tf = 0.002f; // 1ms default
-    motor.LPF_current_d.Tf = 0.002f; // 1ms default
-	motor.PID_current_q.limit= 1;
-	motor.PID_current_d.limit= 1;
-	*/
-
+	//This values are experimental and require tuning for every motor
 	motor.PID_current_q.P = 3; //1 //small motor 
     motor.PID_current_q.I= 20; //10
     motor.PID_current_d.P= 3; //1
@@ -428,25 +287,7 @@ void setup() {
 	motor.PID_current_q.limit= 8;
 	motor.PID_current_d.limit= 6;
 	motor.current_limit = 0.5;    // 2 Amp current limit
-	/*
-	// Limits 
 	
-	//motor.voltage_limit = 2;   // 12 Volt limit 
-	//motor.current_limit = 2;    // 2 Amp current limit
-
-	// comment out if not needed
-	motor.useMonitoring(Serial);
-	//motor.monitor_variables = _MON_CURR_Q | _MON_CURR_D; // monitor the two currents d and q
-	
-	
-	//motor.useMonitoring(Serial);
-	motor.monitor_downsample = 100; // set downsampling can be even more > 100
-	motor.monitor_variables =  _MON_VEL;// _MON_CURR_Q | _MON_CURR_D; // set monitoring of d and q currents _MON_TARGET | _MON_VEL | _MON_ANGLE |
-	motor.monitor_decimals = 2; //!< monitor outputs decimal places
-	*/
-
-	//motor.sensor_direction = Direction::CW;
-
 	// init motor hardware
 	motor.useMonitoring(Serial);
 	motor.monitor_downsample = 1;
@@ -456,7 +297,7 @@ void setup() {
 	motor.init();
 
 	// current sense init hardware
-	current_sense.skip_align = true;
+	current_sense.skip_align = true; //Current sense align is skipped, as sensor location is already known
 	current_sense.init();
 
 	// link the current sense to the motor
@@ -468,10 +309,7 @@ void setup() {
 
 	motor.initFOC();
 
-	// set the initial motor target
-	//motor.target = 0; // unit depends on control mode 
-
-	// add target command T
+	// add commands
 	command.add('T',doTarget, "target ");
 	command.add('M', onMotor, "motor");
 	command.add('S', onStatus, "Status");
@@ -480,22 +318,16 @@ void setup() {
 	command.add('L', doFL, "Flux linkage");
 	
 	Serial.println(F("Motor ready."));
-	Serial.println(F("Set the target voltage : - commnad T"));
-	Serial.println(F("Calculate the motor KV : - command K"));
+	Serial.println(F("Set the target value   : - commnad T"));
+	Serial.println(F("DRV8316C driver status : - command S"));
+	Serial.println(F("DRV8316C hard reset    : - command R"));
+	Serial.println(F("Set d-axis current     : - command F")); //As this ESC mainly uses sensorless FOC, this value mainly adjusts commutation angle 
+	Serial.println(F("Change Flux linkage    : - command L")); 
 	_delay(1000);
 
 
-	//printDRV8316Status();
-	//Serial.println("Current Sense gain:");
-	//Serial.println(driver.getCurrentSenseGain());
-
-	//driver.setRecirculationMode(CoastMode);
-	driver.setActiveAsynchronousRectificationEnabled(true);
-	//driver.setActiveSynchronousRectificationEnabled(true);
-	Serial.print("New Slew rate:\t");
-	Serial.println(driver.getSlew());
-
 	
+	//SimpleFOC tasks running on the second core
 	xTaskCreatePinnedToCore(
       InnerFOCTask, /* Function to implement the task */
       "FOC loop", /* Name of the task */
@@ -506,69 +338,33 @@ void setup() {
       0); /* Core where the task should run */
 
 
-	/*
-	Serial.println(F("Press any key to start"));
-	while (!Serial.available()) { }
-	Serial.read();
-	motor.shaft_angle = 0;
-	testAlignmentAndCogging(1);
-
-	motor.move(0);
-	motor.shaft_angle = 0;
-
-	Serial.println(F("Press any key to test in CCW direction"));
-	while (!Serial.available()) { }
-	Serial.read();
-	
-	testAlignmentAndCogging(-1);
-
-	Serial.println(F("Complete"));
-
-	motor.voltage_limit = 0;
-	motor.move(0);
-	while (true) ; //do nothing;
-	*/
-	//LowPassFilter Motor_Start(5);
-
 	motor.controller = MotionControlType::velocity_openloop;    // set motion control loop to be used
-	float startup_target = -100;
-	target = 0;
-	//LowPassFilter position_test(0.002);
+	
+	//Rotor alignment procedure
+	target = 0;  
+	_delay(2000); //Tweak this value so that rotor has enough time to settle, the larger load and lower pole count increases the settle time
 
-	_delay(2000);
-	motor.zero_electric_angle = -0.1;
-	target = startup_target;
+	motor.zero_electric_angle = -0.1; //Motor not always stable at 0 offset, 0.1 offset in the rotation is good enough for the start
+	target = -100;
 	unsigned long startup_timer = millis();
+
+	//Open-loop startup
 	while ((millis() - startup_timer) < 10000){
-		//motor.move(Motor_Start(startup_target));
 		motor.monitor();
 		command.run();
-		/*sensor.update();
-		Serial.print("Angles:");
-		Serial.print("\t");
-		Serial.print(motor.shaft_angle,5);
-		Serial.print("\t");
-		Serial.print(sensor.getMechanicalAngle(),5);
-		Serial.print("\t");
-		Serial.println(motor.shaft_angle - sensor.electrical_angle);*/
-		
 		_delay(5);
 	}
 
-	LPF_target.Tf = 0.001;
+	//LPF_target.Tf = 0.001; //speedup target change for torque control
 	//target = -0.15;
 	motor.current_sp_field_weakening = 0;
-	sensor.flux_linkage = 0.035;
+	sensor.flux_linkage = 0.035; //Important to match Flux linkage at target speed, otherwise switchover is not smooth
 	sensor.update();
-
-	Serial.print("Calculated offset for start");
-	Serial.print("\t");
-	Serial.println(motor.shaft_angle - sensor.electrical_angle);
-	//motor.zero_electric_angle = sensor.electrical_angle - motor.shaft_angle ;
 
 	motor.controller = MotionControlType::velocity;
 	//motor.controller = MotionControlType::torque;
 
+	//smooth switchover from openloop to closed loop
 	if (target > 0){
 		//Serial.println(motor.voltage.q);
 		motor.PID_current_q.reset_FF(motor.voltage.q);
@@ -576,188 +372,74 @@ void setup() {
 	else if (target < 0){
 		motor.PID_current_q.reset_FF(-motor.voltage.q);
 	}
-	//motor.PID_current_q.reset_FF(motor.voltage.q);
-	
+
 	_delay(50);
 	LPF_target.Tf = 1;
 
-	//_delay(5000);
-	//sensor.flux_linkage=0.035;
-	//motor.PID_velocity.P = 0.1;
-	//motor.PID_velocity.I = 5;
 }
     
-//LowPassFilter LPF_target(0.5);  //  the higher the longer new values need to take effect
-unsigned long timer_start, timer_start_2, stall_timer = millis();
+unsigned long timer_start, timer_start_2, count_timer = millis();
+unsigned long loops = 0;
+
+float velocity_avg, Iq_avg, Id_avg, Vq_avg, Vd_avg, Vin_avg, Iin_avg, temp_avg = 0;
 
 void loop(){
-	//motor.loopFOC();
-	//motor.move(LPF_target(target));
-		
-	if (millis()-timer_start_2 > 20){
-		motor.monitor();
-		timer_start_2 = millis();
+
+	if(millis() - count_timer > 10){
+		velocity_avg += motor.shaft_velocity;
+		Iq_avg += motor.current.q;		
+		Id_avg += motor.current.d;
+		Vq_avg += motor.voltage.q;
+		Vd_avg += motor.voltage.d;
+		Vin_avg += (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
+		Iin_avg += current_sense.getDCCurrent(motor.electrical_angle);
+		temp_avg += (analogReadMilliVolts(PCB_TEMP)-500)/10;
+		loops++;
+		count_timer = millis();
 	}
 
-	/*
-	sensor2.update();
-	
-	if (millis()-timer_start > 1000){
-		timer_start = millis();
-		sensor.update();
-		sensor2.update();
-		Serial.println("\nSensor comparison: ");
-		Serial.print(sensor.getAngle());
-		Serial.print("\t");
-		Serial.println(sensor.getVelocity());
-		Serial.print(sensor2.getAngle());
-		Serial.print("\t");
-		Serial.println(sensor2.getVelocity());
-	}*/
-	//sensor.update();
-	/*
-	// display the angle and the angular velocity to the terminal
-	Serial.print(sensor.getAngle());
-	Serial.print("\t");
-	Serial.println(sensor.getVelocity());
-	_delay(200);
-	*/
-
-	taskYIELD();
-	if (millis()-timer_start > 1000){
-		command.run();
-		
-		if (motor.shaft_velocity < (20000/motor.pole_pairs/10)){
-			motor.monitor();
-
-			/*
-			sensor.update();
-			Serial.print("Shaft angle:");
-			Serial.print("\t");
-			Serial.print(_normalizeAngle(motor.shaft_angle));
-			Serial.print("\t");
-			Serial.print(sensor.getMechanicalAngle());
-			Serial.print("\t");*/
-
-			//PCB temperature reading
-			Serial.print("PCB Temperature:");
-			Serial.print("\t");
-			Serial.println(((3100.0f*analogRead(PCB_TEMP)/4095.0f)-500)/10);
-			Serial.print("Flux values, A, FL:");
-			Serial.print("\t");
-			Serial.print(sensor.flux_alpha,5);
-			Serial.print("\t");
-			Serial.print(sensor.flux_beta,5);
-			Serial.print("\t");
-			Serial.print(motor.shaft_angle,5);
-			Serial.print("\t");
-			Serial.print(sensor.getMechanicalAngle(),5);
-			Serial.print("\t");
-			Serial.println(sensor.flux_linkage,5); 
-
-			strip.setPixelColor(0, strip.Color(  0,   0,   0));         //  Set pixel's color (in RAM)
-			strip.show();  
-		}
-		
+	if (millis()-timer_start_2 > 100){
+		motor.monitor();
 		if (!digitalRead(nFAULT)){
 			strip.setPixelColor(0, strip.Color(  100,   0,   0));         //  Set pixel's color (in RAM)
     		strip.show();
-
 			motor.disable();
-			sensor.update();
 			Serial.println("Fault or warning detected!");
 			printDRV8316Status();
 			_delay(3000);
 			//motor.enable();
 		}
+		timer_start_2 = millis();
+	}
+
+	
+	if (millis()-timer_start > 10000){
+		command.run();
+		
+		if (motor.shaft_velocity < (20000/motor.pole_pairs/9.54)){
+			motor.monitor();
+			velocity_avg, Iq_avg, Id_avg, Vq_avg, Vd_avg, Vin_avg, Iin_avg, temp_avg /= loops;
+
+			//Parameter printing
+			Serial.print("vel, Iq, Id, Vq, Vd, Vin, Iin, temp:");
+			Serial.print("\t");
+			Serial.printf("%.3f | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f | %.3f \n", velocity_avg, Iq_avg, Id_avg, Vq_avg, Vd_avg, Vin_avg, Iin_avg, temp_avg);
+
+			Serial.print("Flux values, A, FL:");
+			Serial.print("\t");
+			Serial.println(sensor.flux_linkage,5); 
+
+			strip.setPixelColor(0, strip.Color(  0,   0,   0));         //  Set pixel's color (in RAM)
+			strip.show();
+		}
+		velocity_avg, Iq_avg, Id_avg, Vq_avg, Vd_avg, Vin_avg, Iin_avg, temp_avg = 0;
+		loops = 0;
+
 		timer_start = millis();
 
 	}
-	/*
-	if (millis()-timer_start_2 > 10){
-		/*float bemf_a = adcRead(4);
-		delayMicroseconds(1);
-		float bemf_b = adcRead(5);
-		delayMicroseconds(1);
-		float bemf_c = adcRead(6);
-		float bemf_a = analogRead(4);
-		float bemf_b = analogRead(5);
-		float bemf_c = analogRead(6);
-		Serial.print(bemf_a);
-		Serial.print("\t");
-		Serial.print(bemf_b);
-		Serial.print("\t");
-		Serial.print(bemf_c);
-		Serial.println("\t");
 
-		timer_start_2 = millis();
-	}*/
-
-	/*
-	if (millis()-stall_timer > 250 && (motor.current.d * motor.shaft_velocity ) < 0 && (motor.current.d * motor.target ) > 0 && !Stall_recovery){
-		Serial.println("\nStall detected!");
-		motor.controller == MotionControlType::torque;
-		motor.current_limit = 0.5;    // 2 Amp current limit
-		LPF_target.Tf = 0.001;
-
-		prestall_target = target;  //motor.target;
-
-		if (motor.target < 0){
-			target = -0.5;    // 2 Amp current limit
-			Stall_recovery_dir = 0;
-		}
-		else{
-			target = 0.5;    // 2 Amp current limit
-			Stall_recovery_dir = 1;
-		}
-		//target = 0.5;    // 2 Amp current limit
-		Stall_recovery = true;
-		unsigned long temp = millis();
-		while ((millis() - temp) < 300){
-			motor.move(target);
-			motor.loopFOC();
-		}
-
-		if (Stall_recovery){
-			motor.current_limit = 2;    // 2 Amp current limit
-			LPF_target.Tf = 0.5;
-
-			if (Stall_recovery_dir == 0){
-				target = -1;    // 2 Amp current limit
-			}
-			else if (Stall_recovery_dir == 1){
-				target = 1;    // 2 Amp current limit
-			}
-
-			//motor.move(target);
-			unsigned long temp = millis();
-			while ((millis() - temp) < 200){
-				//motor.move(target);
-				motor.move(target);
-				motor.loopFOC();
-			}
-
-
-			target = prestall_target;
-
-			temp = millis();
-			while ((millis() - temp) < 200){
-				//motor.move(target);
-				motor.move(LPF_target(target));;
-				motor.loopFOC();
-			}
-
-
-			Stall_recovery = false;
-			LPF_target.Tf = 0.5;
-
-			
-
-		}
-		stall_timer = millis();
-	}
-	*/
-
+	taskYIELD();
 }
 
 
