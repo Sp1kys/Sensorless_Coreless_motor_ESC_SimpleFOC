@@ -42,11 +42,11 @@ Adafruit_NeoPixel strip(PIXEL_COUNT, LED_DIN, NEO_GRB + NEO_KHZ800);
 //BLDCMotor motor = BLDCMotor(4,0.1375,1100,19.45*1e-6); //Plastic motor 957 kV?
 //BLDCMotor motor = BLDCMotor(7,0.01,3500,0.45*1e-6); //Orange motor 2700 kV?
 //BLDCMotor motor = BLDCMotor(4,0.525,1000,3.84*1e-7); //PCB motor 
-BLDCMotor motor = BLDCMotor(1,5.75,250,3.02*1e-4); //Experimental Coreless motor 
+BLDCMotor motor = BLDCMotor(1,7,250,3.02*1e-4); //Experimental Coreless motor 
 //BLDCMotor motor = BLDCMotor(6,0.1,12000,0.82*1e-6); //7300 kV
 
 DRV8316_CSAGain CS_Gain = Gain_0V3; //Single variable for all Current sense gain
-unsigned int CS_Gain_mV = 150 * 2^(CS_Gain); //Needed for Low Side Current Sense 
+unsigned int CS_Gain_mV = 300;///150 * 2^(CS_Gain); //Needed for Low Side Current Sense 
 
 
 MXLEMMINGObserverSensor sensor = MXLEMMINGObserverSensor(motor);
@@ -271,9 +271,9 @@ void setup() {
   
 	
 	// velocity loop PID, needs to be tuned for the motor
-	motor.PID_velocity.P = 0.1;
+	motor.PID_velocity.P = 0.05;
 	motor.PID_velocity.I = 0.02;
-	motor.PID_velocity.limit= 2000;
+	//motor.PID_velocity.limit= 2000;
 	motor.LPF_velocity.Tf = 0.05; // Low pass filtering time constant 
 
 	//This values are experimental and require tuning for every motor
@@ -284,12 +284,12 @@ void setup() {
 	motor.PID_current_d.D = 0.001;
     motor.LPF_current_q.Tf = 0.003f; // 1ms default
     motor.LPF_current_d.Tf = 0.003f; // 1ms default
-	motor.PID_current_q.limit= 8;
+	motor.PID_current_q.limit= 15;
 	motor.PID_current_d.limit= 6;
 	motor.current_limit = 0.5;    // 2 Amp current limit
 	
 	// init motor hardware
-	motor.useMonitoring(Serial);
+	//motor.useMonitoring(Serial);
 	motor.monitor_downsample = 1;
 	motor.monitor_variables =  _MON_CURR_Q | _MON_CURR_D; //_MON_VEL;// _MON_CURR_Q | _MON_CURR_D; // set monitoring of d and q currents _MON_TARGET | _MON_VEL | _MON_ANGLE |
 	motor.monitor_decimals = 4; //!< monitor outputs decimal places
@@ -345,6 +345,7 @@ void setup() {
 	_delay(2000); //Tweak this value so that rotor has enough time to settle, the larger load and lower pole count increases the settle time
 
 	motor.zero_electric_angle = -0.1; //Motor not always stable at 0 offset, 0.1 offset in the rotation is good enough for the start
+	// = -500;
 	target = -100;
 	unsigned long startup_timer = millis();
 
@@ -358,7 +359,8 @@ void setup() {
 	//LPF_target.Tf = 0.001; //speedup target change for torque control
 	//target = -0.15;
 	motor.current_sp_field_weakening = 0;
-	sensor.flux_linkage = 0.035; //Important to match Flux linkage at target speed, otherwise switchover is not smooth
+	sensor.flux_linkage = 0.017; //Important to match Flux linkage at target speed, otherwise switchover is not smooth 0.035
+	//sensor.flux_linkage = 0.008;
 	sensor.update();
 
 	motor.controller = MotionControlType::velocity;
@@ -391,14 +393,15 @@ void loop(){
 		Id_avg += motor.current.d;
 		Vq_avg += motor.voltage.q;
 		Vd_avg += motor.voltage.d;
-		Vin_avg += (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
+		//Vin_avg += (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
 		Iin_avg += current_sense.getDCCurrent(motor.electrical_angle);
-		temp_avg += (analogReadMilliVolts(PCB_TEMP)-500)/10;
+		//temp_avg += (analogReadMilliVolts(PCB_TEMP)-500)/10;
 		loops++;
 		count_timer = millis();
 	}
 
 	if (millis()-timer_start_2 > 100){
+		command.run();
 		motor.monitor();
 		if (!digitalRead(nFAULT)){
 			strip.setPixelColor(0, strip.Color(  100,   0,   0));         //  Set pixel's color (in RAM)
@@ -418,7 +421,14 @@ void loop(){
 		
 		if (motor.shaft_velocity < (20000/motor.pole_pairs/9.54)){
 			motor.monitor();
-			velocity_avg, Iq_avg, Id_avg, Vq_avg, Vd_avg, Vin_avg, Iin_avg, temp_avg /= loops;
+			velocity_avg /= loops;
+			Iq_avg /= loops;
+			Id_avg /= loops;
+			Vq_avg /= loops;
+			Vd_avg /= loops;
+			Vin_avg = (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
+			Iin_avg /= loops;
+			temp_avg = (analogReadMilliVolts(PCB_TEMP)-500)/10;
 
 			//Parameter printing
 			Serial.print("vel, Iq, Id, Vq, Vd, Vin, Iin, temp:");
