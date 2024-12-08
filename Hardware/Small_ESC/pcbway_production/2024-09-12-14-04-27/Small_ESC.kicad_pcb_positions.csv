@@ -1,0 +1,88 @@
+﻿pos_x,pos_y,rotation,side,designator,mpn,pack,footprint,value,mount_type,place
+12.7,10.16,180.0,top,C1,,,C_0402_1005Metric,0.1 uF 50V,smt,True
+17.996,3.302,90.0,top,C10,,,C_0805_2012Metric,10 uF 50V,smt,True
+5.842,3.302,90.0,top,C11,,,C_0805_2012Metric,10 uF 50V,smt,True
+34.544,7.62,90.0,top,C12,,,C_0805_2012Metric,10 uF 50V,smt,True
+32.512,4.064,-90.0,top,C14,,,C_0805_2012Metric,10 uF 50V,smt,True
+34.544,4.064,-90.0,top,C15,,,C_0805_2012Metric,10 uF 50V,smt,True
+29.464,3.048,90.0,top,C16,,,C_Rect_L7.0mm_W3.5mm_P5.00mm,220 uF 35V,tht,False
+12.446,15.242,-90.0,bottom,C17,,,C_0402_1005Metric,0.1 uF 50V,smt,True
+21.59,9.652,0.0,top,C18,,,C_0603_1608Metric,1 uF 35V,smt,True
+19.558,10.8712,0.0,top,C19,,,C_0402_1005Metric,47 nF 35V,smt,True
+16.51,6.096,90.0,top,C2,,,C_0402_1005Metric,56 pF 50V,smt,True
+15.494,10.16,90.0,bottom,C20,,,C_0805_2012Metric,22 uF 16V,smt,True
+24.892,9.652,0.0,top,C21,,,C_0805_2012Metric,10 uF 50V,smt,True
+22.606,11.43,180.0,top,C22,,,C_0402_1005Metric,0.1 uF 50V,smt,True
+14.476,28.956,0.0,bottom,C23,,,C_0402_1005Metric,56 pF 50V,smt,True
+14.476,27.94,0.0,bottom,C24,,,C_0402_1005Metric,56 pF 50V,smt,True
+14.476,26.924,0.0,bottom,C25,,,C_0402_1005Metric,56 pF 50V,smt,True
+12.7,33.02,180.0,bottom,C26,,,C_0402_1005Metric,0.1 uF 50V,smt,True
+13.932,3.302,90.0,top,C27,,,C_0805_2012Metric,10 uF 50V,smt,True
+15.964,3.302,90.0,top,C28,,,C_0805_2012Metric,10 uF 50V,smt,True
+32.512,7.62,90.0,top,C29,,,C_0805_2012Metric,10 uF 50V,smt,True
+8.382,7.62,-90.0,top,C3,,,C_0805_2012Metric,3.3 uF 50V,smt,True
+7.874,3.302,90.0,top,C30,,,C_0805_2012Metric,10 uF 50V,smt,True
+9.868,3.302,90.0,top,C31,,,C_0805_2012Metric,10 uF 50V,smt,True
+11.9,3.302,90.0,top,C32,,,C_0805_2012Metric,10 uF 50V,smt,True
+6.858,11.684,0.0,top,C4,,,C_1210_3225Metric,47 uF 16V,smt,True
+13.716,36.322,90.0,bottom,C5,,,C_0603_1608Metric,1 uF 35V,smt,True
+10.414,36.576,90.0,bottom,C6,,,C_0805_2012Metric,22 uF 16V,smt,True
+12.7,34.036,180.0,bottom,C7,,,C_0402_1005Metric,0.1 uF 50V,smt,True
+22.225,35.306,0.0,bottom,C8,,,C_0603_1608Metric,1 uF 35V,smt,True
+20.8788,20.4724,-90.0,top,C9,,,C_0603_1608Metric,1 uF 35V,smt,True
+9.398,12.192,90.0,bottom,D1,,,D_SOD-123,1N5819HW,smt,True
+4.445,28.448,0.0,top,D2,,,LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm,WS2812B,smt,True
+1.4224,37.338,0.0,top,FID1,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+1.4224,1.524,0.0,top,FID2,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+36.83,1.524,0.0,top,FID3,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+1.4224,37.338,180.0,bottom,FID4,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+1.4224,1.524,180.0,bottom,FID5,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+36.83,1.524,180.0,bottom,FID6,,,Fiducial_0.75mm_Mask1.5mm,Fiducial,smt,False
+19.812,15.24,90.0,top,IC1,DRV8316RRGFR,,QFN50P500X700X100-41N-D,DRV8316CRRGFR,smt,True
+18.654,31.481,0.0,top,IC2,ESP32-S3-MINI-1-N8,,ESP32S3MINI1N8,ESP32-S3-MINI-1-N8,smt,True
+3.81,19.812,-90.0,top,J1,,,USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal,USB4105,smt,True
+34.098,12.192,90.0,top,J2,,,"TerminalBlock_Phoenix_PT-1,5-3-3.5-H_1x03_P3.50mm_Horizontal","PT-1,5-3-3.5-H",tht,True
+21.646,4.764,0.0,top,J3,,,"TerminalBlock_Phoenix_PT-1,5-2-3.5-H_1x02_P3.50mm_Horizontal","PT-1,5-2-3.5-H",tht,True
+35.514,28.762,90.0,top,J4,,,JST_EH_B4B-EH-A_1x04_P2.50mm_Vertical,JST_EH_B4B-EH-A,tht,False
+29.926,23.722,90.0,top,J5,,,JST_EH_B6B-EH-A_1x06_P2.50mm_Vertical,JST_EH_B6B-EH-A,tht,False
+5.334,8.128,90.0,top,L1,VLS3015CX-100M-H,,VLS3015,10 uH,smt,True
+12.72,7.686,0.0,top,PS1,TPS54202DDCR,,SOT95P280X110-6N,TPS54202DDCR,smt,True
+15.494,6.096,90.0,top,R1,,,R_0402_1005Metric,100kR,smt,True
+25.887431,25.4,180.0,bottom,R10,,,R_0402_1005Metric,0R,smt,True
+25.881187,26.416,180.0,bottom,R11,,,R_0402_1005Metric,0R,smt,True
+25.897433,27.432,180.0,bottom,R12,,,R_0402_1005Metric,0R,smt,True
+22.479,36.576,180.0,bottom,R13,,,R_0402_1005Metric,5.1kR,smt,True
+25.902565,28.448,180.0,bottom,R14,,,R_0402_1005Metric,0R,smt,True
+32.766,27.94,-90.0,bottom,R15,,,R_0402_1005Metric,5.1kR,smt,True
+33.782,27.94,-90.0,bottom,R16,,,R_0402_1005Metric,5.1kR,smt,True
+22.86,25.019,90.0,bottom,R17,,,R_0402_1005Metric,5.1kR,smt,True
+18.542,10.16,180.0,bottom,R18,,,R_0805_2012Metric,22 R,smt,True
+25.891357,29.464,180.0,bottom,R19,,,R_0402_1005Metric,0R,smt,True
+15.494,8.128,90.0,top,R2,,,R_0402_1005Metric,22.1kR,smt,True
+25.908,30.48,180.0,bottom,R20,,,R_0402_1005Metric,0R,smt,True
+12.19,28.956,180.0,bottom,R21,,,R_0402_1005Metric,1kR,smt,True
+12.19,27.94,180.0,bottom,R22,,,R_0402_1005Metric,1kR,smt,True
+12.19,26.924,180.0,bottom,R23,,,R_0402_1005Metric,1kR,smt,True
+34.417,24.003,0.0,bottom,R24,,,R_0402_1005Metric,5.1kR,smt,True
+34.417,22.86,0.0,bottom,R25,,,R_0402_1005Metric,5.1kR,smt,True
+34.417,21.717,0.0,bottom,R26,,,R_0402_1005Metric,5.1kR,smt,True
+36.703,24.003,180.0,bottom,R27,,,R_0402_1005Metric,47kR,smt,True
+36.322,12.7,-90.0,bottom,R28,,,R_0402_1005Metric,47kR,smt,True
+36.703,22.86,180.0,bottom,R29,,,R_0402_1005Metric,47kR,smt,True
+7.62,11.684,90.0,bottom,R3,,,R_0402_1005Metric,100kR,smt,True
+36.322,16.256,-90.0,bottom,R30,,,R_0402_1005Metric,47kR,smt,True
+36.703,21.717,180.0,bottom,R31,,,R_0402_1005Metric,47kR,smt,True
+36.322,19.812,-90.0,bottom,R32,,,R_0402_1005Metric,47kR,smt,True
+11.43,15.242,-90.0,bottom,R33,,,R_0402_1005Metric,5.1kR,smt,True
+7.62,13.716,-90.0,bottom,R4,,,R_0402_1005Metric,5.1kR,smt,True
+5.334,22.86,-90.0,bottom,R5,,,R_0402_1005Metric,5.1kR,smt,True
+5.334,16.764,90.0,bottom,R6,,,R_0402_1005Metric,5.1kR,smt,True
+31.75,27.94,90.0,bottom,R7,,,R_0402_1005Metric,1kR,smt,True
+31.75,25.908,-90.0,bottom,R8,,,R_0402_1005Metric,1kR,smt,True
+32.766,25.908,-90.0,bottom,R9,,,R_0402_1005Metric,1kR,smt,True
+8.133,33.401,-90.0,top,SW1,,,PinHeader_1x02_P2.54mm_Vertical,Boot,tht,False
+8.133,37.084,-90.0,top,SW2,,,PinHeader_1x02_P2.54mm_Vertical,RST,tht,False
+5.842,19.812,0.0,bottom,U1,,,SOT-23-6,USBLC6-4SC6,smt,True
+12.7,18.4912,-90.0,bottom,U2,,,SOT-23,MCP9700x-HTT,smt,True
+26.162,32.766,180.0,bottom,U3,,,SOT-23-6,USBLC6-4SC6,smt,True
+32.766,32.004,90.0,bottom,U4,,,SOT-23-6,USBLC6-4SC6,smt,True

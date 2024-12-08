@@ -1,0 +1,8 @@
+# Requirements for SimpleFOCStudio
+PyQt5==5.15.9
+pyqtgraph==0.13.1
+pyserial==3.5
+numpy==1.26.4
+# Requirements for Pyinstaller packaging process:
+pyinstaller
+Pillow
