@@ -46,7 +46,7 @@ BLDCMotor motor = BLDCMotor(1,7,250,3.02*1e-4); //Experimental Coreless motor
 //BLDCMotor motor = BLDCMotor(6,0.1,12000,0.82*1e-6); //7300 kV
 
 DRV8316_CSAGain CS_Gain = Gain_0V3; //Single variable for all Current sense gain
-unsigned int CS_Gain_mV = 300;///150 * 2^(CS_Gain); //Needed for Low Side Current Sense 
+unsigned int CS_Gain_mV = 300; ///150 * 2^(CS_Gain); //Needed for Low Side Current Sense 
 
 
 MXLEMMINGObserverSensor sensor = MXLEMMINGObserverSensor(motor);
@@ -359,8 +359,8 @@ void setup() {
 	//LPF_target.Tf = 0.001; //speedup target change for torque control
 	//target = -0.15;
 	motor.current_sp_field_weakening = 0;
-	sensor.flux_linkage = 0.017; //Important to match Flux linkage at target speed, otherwise switchover is not smooth 0.035
-	//sensor.flux_linkage = 0.008;
+	//sensor.flux_linkage = 0.017; //Important to match Flux linkage at target speed, otherwise switchover is not smooth 0.035
+	sensor.flux_linkage = 0.008;
 	sensor.update();
 
 	motor.controller = MotionControlType::velocity;
@@ -393,9 +393,9 @@ void loop(){
 		Id_avg += motor.current.d;
 		Vq_avg += motor.voltage.q;
 		Vd_avg += motor.voltage.d;
-		//Vin_avg += (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4));
+		//Vin_avg += (((float)analogReadMilliVolts(VBUS_SENSE)/1000)*(R3+R4)/(R4)); //Causes ADC conflicts with current sensing and motor stuttering
 		Iin_avg += current_sense.getDCCurrent(motor.electrical_angle);
-		//temp_avg += (analogReadMilliVolts(PCB_TEMP)-500)/10;
+		//temp_avg += (analogReadMilliVolts(PCB_TEMP)-500)/10; //Causes ADC conflicts with current sensing and motor stuttering
 		loops++;
 		count_timer = millis();
 	}
