@@ -712,7 +712,7 @@
             ],
             "cStandard": "gnu17",
             "cppStandard": "gnu++17",
-            "compilerPath": "C:/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-gcc.exe",
+            "compilerPath": "C:/.platformio/packages/toolchain-xtensa-esp-elf/bin/xtensa-esp32s3-elf-gcc.exe",
             "compilerArgs": [
                 "-mlongcalls",
                 "-mdisable-hardware-atomics",

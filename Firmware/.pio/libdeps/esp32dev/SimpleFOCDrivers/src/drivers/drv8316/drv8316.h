@@ -193,7 +193,7 @@ class DRV8316Driver {
 		DRV8316Driver(int cs, bool currentLimit = false, int nFault = NOT_SET) : currentLimit(currentLimit), cs(cs), nFault(nFault), spi(&SPI), settings(1000000, MSBFIRST, SPI_MODE1) {};
 		virtual ~DRV8316Driver() {};
 
-		virtual void init(SPIClass* _spi = &SPI_2);
+		virtual void init(SPIClass* _spi = &SPI);
 
 		void clearFault(); // TODO check for fault condition methods
 
@@ -295,7 +295,7 @@ class DRV8316Driver3PWM : public DRV8316Driver, public BLDCDriver3PWM {
 			DRV8316Driver(cs, currentLimit, nFault), BLDCDriver3PWM(phA, phB, phC, en) { enable_active_high=false; };
 		virtual ~DRV8316Driver3PWM() {};
 
-		virtual void init(SPIClass* _spi = &SPI_2) override;
+		virtual void init(SPIClass* _spi = &SPI) override;
 
 };
 
@@ -308,7 +308,7 @@ class DRV8316Driver6PWM : public DRV8316Driver, public BLDCDriver6PWM {
 			DRV8316Driver(cs, currentLimit, nFault), BLDCDriver6PWM(phA_h, phA_l, phB_h, phB_l, phC_h, phC_l, en) { enable_active_high=false; };
 		virtual ~DRV8316Driver6PWM() {};
 
-		virtual void init(SPIClass* _spi = &SPI_2) override;
+		virtual void init(SPIClass* _spi = &SPI) override;
 
 };
 
